@@ -1,3 +1,3 @@
-# VibraTalk #
+# PexiTalk #
 
-a simple xTalk variant for the Web
+a simple xTalk variant implemented in JavaScript for Desktop and Web
