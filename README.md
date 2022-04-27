@@ -1,3 +1,3 @@
-# PexiTalk #
+# MetonScript #
 
-a simple xTalk variant implemented in JavaScript for Desktop and Web
+a simple scripting language implemented in JavaScript for CLI, Desktop and Web
