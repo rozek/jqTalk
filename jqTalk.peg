@@ -1,0 +1,382 @@
+/*******************************************************************************
+*                                                                              *
+*                          jqTalk Grammar for PEG.js                           *
+*                                                                              *
+*******************************************************************************/
+
+  script                  = script_statements? _
+
+/**** (outer) script statements ****/
+
+  script_statements       = _ script_statement (_ EOS _ script_statement?)*
+  script_statement        = property_definition
+                          / getter_definition
+                          / setter_definition
+                          / eventhandler_definition
+                          / domhandler_definition
+                          / inner_statement
+
+/**** properties ****/
+
+  property_definition     = 'property'i _$_ identifier (_ ':=' _ expression)?
+
+  getter_definition       = 'to'i _$_ 'get'i _$_ 'property'i _$_ identifier _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'to'i _$_ 'get'i)?
+  setter_definition       = 'to'i _$_ 'set'i _$_ 'property'i _$_ identifier
+                              _$_ 'to'i _$_ identifier _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'to'i _$_ 'set'i)?
+
+/**** event handlers ****/
+
+  eventhandler_definition = simple_eventhandler
+                          / specific_eventhandler
+                          / generic_eventhandler
+  simple_eventhandler     = 'on'i _$ string (_ 'as'i _$_ identifier)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'on'i)?
+  specific_eventhandler   = 'on'i _$ string _ 'from'i _$ string
+                              (_ 'as'i _$_ identifier)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'on'i)?
+  generic_eventhandler    = 'on'i _$ string _ 'from'i _$_ 'any'i _$ string
+                              (_ 'as'i _$_ identifier)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'on'i)?
+
+  domhandler_definition   = 'on'i _$_ 'domevent'i _$ string (_ 'from'i _$ string)?
+                              (_ 'as'i _$_ identifier)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'on'i)?
+
+/**** inner statements ****/
+
+  inner_statements        = _ inner_statement (_ EOS _ inner_statement?)*
+  inner_statement         = variable_declarations / function_definition
+                          / command / assignment
+
+/**** variable declarations ****/
+
+  variable_declarations   = ('local'i / 'global'i) _$_ variable_declaration
+                            (_ ',' _$ variable_declaration)*
+  variable_declaration    = identifier (_ ':=' _ expression)?
+
+/**** function definitions ****/
+
+  function_definition     = 'function'i _$_ identifier (parameter_list)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'function'i)?
+                          / 'native'i _$_ 'function'i _$_ identifier (parameter_list)? _
+                              string
+                            _ 'end'i (__ 'function'i)?
+
+  parameter_list          = __ parameters
+                          / _ '(' _ parameters? _ ')'
+  parameters              = identifier (_ ',' _$ identifier)*
+
+/**** command ****/
+
+  command                 = native_command
+                          / get_command
+                          / set_command
+                          / put_command
+                          / insert_command
+                          / delete_command
+                          / add_command
+                          / subtract_command
+                          / multiply_command
+                          / divide_command
+                          / raise_command
+                          / invert_command
+                          / if_then_command
+                          / select_by_command
+                          / select_command
+                          / repeat_command
+                          / exit_command
+                          / next_command
+                          / try_catch_command
+                          / throw_command
+                          / trigger_command
+                          / pass_command
+                          / call_command
+                          / return_command
+                          / visual_insertion
+                          / visual_shifting
+                          / visual_movement
+
+/**** native code ****/
+
+  native_command          = 'native'i _$ string
+
+/**** "get"/"set"/"put" ****/
+
+  get_command             = 'get'i alone _$ expression
+  set_command             = 'set'i _$_ identifier _$_ 'to'i alone _$ expression
+                          / 'set'i _$_ item _$_ 'to'i alone _$ expression
+                          / 'set'i _$_ property _$_ 'to'i alone _$ expression
+  put_command             = 'put'i alone _$ expression _ 'into'i _$_ identifier
+                          / 'put'i alone _$ expression _ 'into'i _$_ item
+                          / 'put'i alone _$ expression _ 'into'i _$_ property
+
+/**** item insertion ****/
+
+  insert_command          = 'insert'i _$ expression _$ 'into'i alone _$ expression _$
+                            'at'i alone _$ expression
+                          / 'insert'i _$_ 'each'i alone _$ expression _$
+                            'into'i alone _$ expression _$ 'at'i alone _$ expression
+
+/**** item and visual deletion ****/
+
+  delete_command          = item_deletion / visual_deletion
+  item_deletion           = 'delete'i _$_ item
+                          / 'delete'i _$_ items
+  visual_deletion         = 'delete'i _$_ visual
+
+/**** in-situ operation statements ****/
+
+  add_command             = 'add'i alone _$ expression _$ 'to'i alone _$ expression
+  subtract_command        = 'subtract'i alone _$ expression _$ 'from'i alone _$ expression
+  multiply_command        = 'multiply'i alone _$ expression _$ ('by'i / 'with'i) alone _$ expression
+  divide_command          = 'divide'i alone _$ expression _$ ('by'i / 'through'i) alone _$ expression
+  raise_command           = 'raise'i alone _$ expression _$ 'by'i alone _$ expression
+  invert_command          = 'invert'i alone _$ expression
+
+/**** conditional statements ****/
+
+  if_then_command         = 'if'i alone _$ expression _$ 'then'i alone _ inner_statement
+                          / 'if'i alone _$ expression _$ 'then'i _ EOS
+                              inner_statements
+                            (_ 'else'i _ EOS
+                              inner_statements)?
+                            _ 'end'i (__ 'if'i)?
+
+  select_by_command       = 'select'i __ 'by'i alone _$ expression _ EOS
+                            ( _ 'case'i alone _$ case_values _ EOS
+                                inner_statements)*
+                            ( _ 'else'i _ EOS
+                                inner_statements)?
+                            _ 'end'i (__ 'select')?
+  case_values             = case_value (_ ',' _ case_value)*
+  case_value              = expression
+                          / expression _ 'to'i alone _$_ expression
+
+  select_command          = 'select'i _ EOS
+                            ( _ 'case'i alone _$ expression _ EOS
+                                inner_statements)*
+                            ( _ 'else'i _ EOS
+                                inner_statements)?
+                            _ 'end'i (__ 'select'i)?
+
+/**** loops ****/
+
+  repeat_command          = repeat_forever_command
+                          / repeat_with_command
+                          / repeat_foreach_command
+                          / repeat_while_command
+                          / repeat_until_command
+                          / repeat_times_command
+
+  repeat_forever_command  = 'repeat'i (_$_ identifier)? _$_ 'forever'i _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  repeat_times_command    = 'repeat'i (_$_ identifier)? alone _$ expression (_$ 'times'i)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  repeat_with_command     = 'repeat'i (_$_ identifier)? _$_ 'with'i _$_
+                            identifier _$_ 'from'i alone _$ expression _$
+                            ('down'i _$_)? 'to'i alone _$ expression
+                            (_ 'by'i alone _$ expression)? _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  repeat_foreach_command  = 'repeat'i (_$_ identifier)? _$_ 'for'i _$_ 'each'i _$_
+                            identifier _$_ ('in'i / 'of'i) alone _$ expression _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  repeat_while_command    = 'repeat'i (_$_ identifier)? _$_ 'while'i alone _$ expression _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  repeat_until_command    = 'repeat'i (_$_ identifier)? _$_ 'until'i alone _$ expression _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'repeat'i)?
+
+  exit_command            = 'exit'i __ ('repeat'i / identifier)?
+  next_command            = 'next'i __ ('repeat'i / identifier)?
+
+/**** exception handling ****/
+
+  try_catch_command       = 'try'i _ EOS
+                              inner_statements
+                            _ 'catch'i _$_ identifier _ EOS
+                              inner_statements
+                            _ 'end'i (__ 'try'i)?
+  throw_command           = 'throw'i alone _$ expression
+
+/**** event handling ****/
+
+  trigger_command         = 'trigger'i (_$_ 'domevent'i)? _$ string
+                            (_ 'from'i _$_ visual)? (_ 'using'i alone _$ expression)?
+  pass_command            = 'pass'i _$_ 'event'i
+
+/**** invocation handling ****/
+
+  call_command            = 'call'i alone _$ expression (_ 'with'i alone _$ arguments)?
+                          / 'call'i alone _$ expression (_ 'using'i alone _$ expression)?
+  return_command          = 'return'i (alone _ expression)?
+
+  arguments               = expression (_ ',' _$ expression)*
+
+/**** visual management ****/
+
+  visual_insertion        = 'insert'i _$_ 'new'i alone _$ expression _$ 'into'i _$_ visual
+                            (_ 'at'i alone _$ expression)?
+                          / 'insert'i _$_ 'new'i alone _$ expression _$
+                            ('before'i / 'after'i) _$_ visual
+  visual_shifting         = 'shift'i _$_ visual _$ ('to'i _$_ 'top'i / 'up'i / 'down'i / 'to'i __ 'bottom'i)
+  visual_movement         = 'move'i _$_ visual _$ 'into'i _$_ visual
+                            (_ 'at'i alone _$ expression)?
+                          / 'move'i _$_ visual _$ ('before'i / 'after'i) _$_ visual
+
+/**** assignment ****/
+
+  assignment              = variable_assignment / item_assignment
+  variable_assignment     = identifier _ ':=' _ expression
+  item_assignment         = direct_item _ ':=' _ expression
+
+/**** instantiation and duplication ****/
+
+  new_structure           = new_array / new_dictionary / structure_duplicate
+  new_array               = 'new'i _$_ 'array'i (__ 'using'i alone _$ expression)?
+  new_dictionary          = 'new'i _$_ 'dictionary'i (__ 'using'i alone _$ expression)?
+  structure_duplicate     = ('deep'i _$_)? 'copy'i _$_ 'of'i alone _$ expression
+
+/**** dereferencing ****/
+
+  item                    = absolute_item / relative_item / direct_item
+  absolute_item           = 'item'i alone _$ expression _$ ('of'i / 'from'i) alone _$ expression
+  relative_item           = 'the'i _$_ numeral _$_ 'item'i _$_ ('of'i / 'from'i) alone _$ expression
+  direct_item             = identifier (_ '[' _$ expression _$ ']')+
+
+  items                   = 'items'i alone _$ expression _$ 'to'i alone _$ expression _$
+                            ('of'i / 'from'i) alone _$ expression
+
+  property                = 'the'i _$_ identifier _$_ 'of'i _$_ visual
+
+/**** visual lookup ****/
+
+  visual                  = applet / card / container / component / any_visual
+  applet                  = 'the'i _$_ 'focused'i _$_ 'applet'i
+                          / 'my'i _$_ 'applet'i
+                          / 'applet'i alone _$ expression
+  card                    = 'the'i _$_ 'focused'i _$_ 'card'i
+                          / 'the'i _$_ 'visible'i _$_ 'card'i _$_ 'of'i _$_ applet
+                          / 'my'i _$_ 'card'i
+                          / 'the'i _$_ numeral _$_ 'card'i _$_ 'of'i _$_ applet
+                          / 'the'i _$_ ('prev'i / 'previous'i / 'next'i) _$_ 'card'i _$_ 'of'i _$_ applet
+                          / 'card'i alone _$ expression
+  container               = 'my'i _$_ 'container'i
+                          / 'the'i _$_ 'container'i _$_ 'of'i _$_ visual
+  component               = 'the'i _$_ 'focused'i _$_ 'component'i
+                          / 'my'i _$_ numeral _$_ 'component'i
+                            (__ 'with'i _$_ 'class'i alone _$ expression)?
+                          / 'my'i _$_ 'component'i alone _$ expression
+                            (__ 'with'i _$_ 'class'i alone _$ expression)?
+                          / 'the'i _$_ numeral _$_ 'component'i
+                            (__ 'with'i _$_ 'class'i alone _$ expression)?
+                            __ 'of'i __ (card / container)
+                          / 'component'i alone _$ expression
+                            (__ 'with'i _$_ 'class'i alone _$ expression)?
+                            _$_ 'of'i _$_ (card / container)
+  any_visual              = 'visual'i alone _$ expression
+
+/**** expression ****/
+
+  expression           = assignment / or_term
+  or_term              = (and_term _ 'or' (_$_ 'else'i)? alone  _$)* and_term
+  and_term             = (not_term _ 'and' (_$_ 'then'i)? alone _$)* not_term
+  not_term             = ('not' alone _$)* comparison
+  comparison           = (additive_term _ ('<' ![=>] / '<=' / '=' !'>' / '>=' / '>' !'=' / '<>' / is_operator) _$)? additive_term
+                       / additive_term _ type_check
+  additive_term        = (multiplicative_term _ ('+' / '-' / '&' / '&&') _$)* multiplicative_term
+  multiplicative_term  = (exponential_term _ ('*' / '/' / 'div' alone / 'mod' alone) _$)* exponential_term
+  exponential_term     = invocation (_ '^' _$ exponential_term)?
+  invocation           = primary ( _ '(' _$ expression_list? _$ ')')?
+  primary              = literal / new_structure
+                       / 'me'i alone / 'it'i alone / identifier
+                       / 'case'i alone _$ expression _$ 'then'i alone _$ expression _$ 'else'i alone _$ expression
+                       / '(' _$ expression _$ ')'
+/*
+                       / expression _ '?' _$ expression _$ ':' _$ expression
+*/
+  literal              = 'nothing' alone / boolean / number / string
+                       / '[' _$ expression_list? _$ ']'
+                       / '[' _$ key_value_list? _$ ']'
+  boolean              = 'true' alone / 'false' alone
+  number               = integer / floating_point / 'pi' alone / 'e' alone / 'nan' alone
+  integer              = binary / decimal / hexadecimal
+  binary               = '0b' [01]+
+  decimal              = [+-]? digit+ ! '.'
+  hexadecimal          = '0x' hex_digit+
+  floating_point       = mantissa exponent?
+  mantissa             = [+-]? (digit+ '.' digit* / '.' digit+)
+  exponent             = [eE] [+-]? digit+
+  string               = single_quoted_text   / double_quoted_text /
+                         single_quoted_string / double_quoted_string
+  single_quoted_string = "'" (escape_sequence / & no_control_char [^\'])* "'"
+  double_quoted_string = '"' (escape_sequence / & no_control_char [^\"])* '"'
+  single_quoted_text   = "'''" (escape_sequence / !"'''" [\'] / [^\'])* "'''"
+  double_quoted_text   = '"""' (escape_sequence / !'"""' [\"] / [^\"])* '"""'
+  escape_sequence      = ('\\' [bfnrtv0'"\\]) / ('\\x' hex_digit{2}) / ('\\u' hex_digit{4})
+  no_control_char      = [^\x00-\x1F\x7F-\x9F\u200B\u2028\u2029\u2060]
+  digit                = [0-9]
+  hex_digit            = [0-9a-fA-F]
+
+  numeral = ordinal (_$_ 'last'i)? / 'last'i
+  ordinal = 'first'i / 'second'i / 'third'i / 'fourth'i / 'fifth'i / 'sixth'i
+          / 'seventh'i / 'eighth'i / 'nineth'i / 'tenth'i / 'eleventh'i / 'twelveth'i
+
+  is_operator = 'is'i (_$_ 'not'i)? (_$_ ('close'i / 'equal'i) _$_ 'to'i)
+              / 'is'i (_$_ 'not'i)? _$_ ('less'i / 'greater'i) _$_ 'than'i
+                (_$_ 'or'i _$_ 'equal'i _$_ 'to'i)
+              / 'matches'i / 'exists'i
+              / 'does'i _$_ 'not'i _$_ ('match'i / 'exist'i)
+  type_check  = 'is'i (_$_ 'not'i)? _$_ ('a'i / 'an'i) _$_ type
+              / 'is'i _$_ 'no'i _$_ type
+              / 'is'i (_$_ 'not'i)? _$_ ('nan'i / 'finite'i)
+  type        = 'boolean'i / 'number'i / 'string'i / 'array'i / 'dictionary'i
+              / 'integer'i / 'ordinal'i / 'cardinal'i
+
+  identifier       = ! (reserved_word alone) identifier_start identifier_part*
+  identifier_start = [$_a-zA-Z]
+  identifier_part  = [$_a-zA-Z0-9]
+
+  alone = ! identifier_part
+
+  expression_list = expression (_ ',' _ expression)*
+  key_value_list  = key_value (_ ',' _ key_value)*
+  key_value       = (string / integer) _ ':' _ expression
+
+  reserved_word = 'global' / 'local' / 'it' / 'me' / 'native'
+                / 'nothing' / 'true' / 'false' / 'nan' / 'e' / 'pi'
+                / 'div' / 'mod' / 'and' / 'or' / 'not'
+                / 'if' / 'then' / 'else' / 'select' / 'when' / 'otherwise'
+                / 'for' / 'from' / 'down' / 'to' / 'by' / 'repeat'
+                / 'while' / 'until' / 'next' / 'exit' / 'return'
+  keyword       = 'domevent'i
+
+  comment       = (line_comment / block_comment)
+  line_comment  = '//' [^\n]* [\n]*
+  block_comment = '/*' (!'*/' .)* '*/'
+
+  EOS = ';' / [\n]
+
+  _$  = _ / [\n]*                       /* whitespace with permitted linefeed */
+  _$_ = (__ / [\n])+
+
+  _  = ([ \t] / block_comment / [\\] [ \t]* ([\n] / line_comment))*
+  __ = ([ \t] / block_comment / [\\] [ \t]* ([\n] / line_comment))+
