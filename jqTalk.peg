@@ -297,7 +297,7 @@
 /**** expressions ****/
 
   expression           = assignment / ternary_term
-  ternary_term         = or_term _ '?' _$ expression _$ ':' _$ expression
+  ternary_term         = or_term (_ '?' _$ expression _$ ':' _$ expression)?
   or_term              = (and_term _ 'or'i (_$_ 'else'i)? alone  _$)* and_term
   and_term             = (not_term _ 'and'i (_$_ 'then'i)? alone _$)* not_term
   not_term             = ('not'i alone _$)* comparison
@@ -306,8 +306,8 @@
   additive_term        = (multiplicative_term _ ('+' / '-' / '&' / '&&') _$)* multiplicative_term
   multiplicative_term  = (exponential_term _ ('*' / '/' / 'div'i alone / 'mod'i alone) _$)* exponential_term
   exponential_term     = invocation (_ '^' _$ exponential_term)?
-  invocation           = primary ( _ '(' _$ expression_list? _$ ')')?
-                       / primary ( _ '[' _$ expression _$ ']')?
+  invocation           = primary (_ '(' _$ expression_list? _$ ')')?
+                       / primary (_ '[' _$ expression _$ ']')?
   primary              = literal / new_structure
                        / 'me'i alone / 'it'i alone / identifier
                        / 'case'i alone _$ expression _$ 'then'i alone _$ expression _$ 'else'i alone _$ expression
@@ -330,7 +330,7 @@
 
   literal              = 'nothing'i alone / boolean / number / string
                        / '[' _$ expression_list? _$ ']'
-                       / '[' _$ key_value_list? _$ ']'
+                       / '[' _$ key_value_list _$ ']'
   boolean              = 'true'i alone / 'false'i alone
   number               = integer / floating_point / 'pi'i alone / 'e'i alone / 'nan'i alone
   integer              = binary / decimal / hexadecimal
