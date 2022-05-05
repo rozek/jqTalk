@@ -67,8 +67,8 @@
   function_definition = 'function'i _$_ identifier (parameter_list)? _ EOS
                             inner_statements
                           _ 'end'i (__ 'function'i)?
-                        / 'native'i _$_ 'function'i _$_ identifier (parameter_list)? _
-                            string
+                        / 'native'i _$_ 'function'i _$_ identifier (parameter_list)? _ EOS
+                            _$ string _$
                           _ 'end'i (__ 'function'i)?
 
   parameter_list = __ parameters
@@ -104,6 +104,7 @@
           / visual_insertion
           / visual_shifting
           / visual_movement
+          / identifier __ expression_list
 
 /**** native code ****/
 
@@ -225,9 +226,10 @@
 
 /**** invocation handling ****/
 
-  call_command   = 'call'i alone _$ expression (_ 'with'i alone _$ arguments)?
-                 / 'call'i alone _$ expression (_ 'using'i alone _$ expression)?
-  return_command = 'return'i (alone _ expression)?
+  call_command   = 'call'i alone _$ expression _ 'with'i alone _$ arguments
+                 / 'call'i alone _$ expression _ 'using'i alone _$ expression
+                 / 'call'i alone _$ expression
+  return_command = 'return'i alone (_ expression)?
 
   arguments      = expression (_ ',' _$ expression)*
 
@@ -261,7 +263,15 @@
 
   property      = 'the'i _$_ identifier _$_ 'of'i _$_ visual
 
-  length        = 'the'i _$_ 'length'i _$_ 'of'i _$_ variable /* very special */
+/**** verbose invocation ****/
+
+  verbose_invocation = 'the'i _$_ identifier _$_ 'of'i _$_ expression
+
+/**** argument handling ****/
+
+  argument_count    = 'the'i _$_ 'number'i _$_ 'of'i _$_ 'arguments'i
+  specific_argument = 'the'i _$_ numeral _$_ 'argument'i
+                    / 'argument'i _$_ expression
 
 /**** visual lookup ****/
 
@@ -270,11 +280,12 @@
              / 'my'i _$_ 'applet'i
              / 'applet'i alone _$ expression
   card       = 'the'i _$_ 'focused'i _$_ 'card'i
-             / 'the'i _$_ 'visible'i _$_ 'card'i _$_ 'of'i _$_ applet
+             / 'the'i _$_ 'visible'i _$_ 'card'i _$_ ('of'i / 'in'i) _$_ applet
              / 'my'i _$_ 'card'i
-             / 'the'i _$_ numeral _$_ 'card'i _$_ 'of'i _$_ applet
-             / 'the'i _$_ ('prev'i / 'previous'i / 'next'i) _$_ 'card'i _$_ 'of'i _$_ applet
-             / 'card'i alone _$ expression
+             / 'the'i _$_ numeral _$_ 'card'i _$_ ('of'i / 'in'i) _$_ applet
+             / 'the'i _$_ ('previous'i / 'prev'i / 'next'i) _$_ 'card'i _$_
+               ('of'i / 'in'i) _$_ applet
+             / 'card'i alone _$ expression _$ ('of'i / 'in'i) _$_ applet
   container  = 'my'i _$_ 'container'i
              / 'the'i _$_ 'container'i _$_ 'of'i _$_ visual
   component  = 'the'i _$_ 'focused'i _$_ 'component'i
@@ -284,10 +295,10 @@
                (__ 'with'i _$_ 'class'i alone _$ expression)?
              / 'the'i _$_ numeral _$_ 'component'i
                (__ 'with'i _$_ 'class'i alone _$ expression)?
-               __ 'of'i __ (card / container)
+               __ ('of'i / 'in'i) __ (card / component / any_visual)
              / 'component'i alone _$ expression
                (__ 'with'i _$_ 'class'i alone _$ expression)?
-               _$_ 'of'i _$_ (card / container)
+               _$_ ('of'i / 'in'i) _$_ (card / component / any_visual)
   any_visual = 'visual'i alone _$ expression
 
 /**** assignments ****/
@@ -303,31 +314,36 @@
   or_term              = (and_term _ 'or'i (_$_ 'else'i)? alone  _$)* and_term
   and_term             = (not_term _ 'and'i (_$_ 'then'i)? alone _$)* not_term
   not_term             = ('not'i alone _$)* comparison
-  comparison           = (additive_term _ ('<' ![=>] / '<=' / '=' !'>' / '>=' / '>' !'=' / '<>' / is_operator) _$)? additive_term
-                       / additive_term _ type_check
-  additive_term        = (multiplicative_term _ ('+' / '-' / '&' / '&&') _$)* multiplicative_term
+  comparison           = additive_term _ type_check
+                       / (additive_term _ ('<' ![=>] / '<=' / '=' !'>' / '>=' / '>' !'=' / '<>' / is_operator) _$)? additive_term
+  additive_term        = (multiplicative_term _ ('+' / '-' / '&&' / '&') _$)* multiplicative_term
   multiplicative_term  = (exponential_term _ ('*' / '/' / 'div'i alone / 'mod'i alone) _$)* exponential_term
   exponential_term     = invocation (_ '^' _$ exponential_term)?
   invocation           = primary (_ '(' _$ expression_list? _$ ')')?
                        / primary (_ '[' _$ expression _$ ']')?
   primary              = literal / new_structure
                        / 'me'i alone / 'it'i alone / identifier
-                       / absolute_item / relative_item / items / property / length
+                       / absolute_item / relative_item / items
+                       / argument_count / specific_argument
+                       / property / verbose_invocation
                        / '(' _$ expression _$ ')'
                        / 'case'i alone _$ expression _$ 'then'i alone _$ expression _$ 'else'i alone _$ expression
 
 /**** "is" operators ****/
 
-  is_operator = 'is'i (_$_ 'not'i)? (_$_ ('close'i / 'equal'i) _$_ 'to'i)
-              / 'is'i (_$_ 'not'i)? _$_ ('less'i / 'greater'i) _$_ 'than'i
-                (_$_ 'or'i _$_ 'equal'i _$_ 'to'i)
-              / 'matches'i / 'exists'i
-              / 'does'i _$_ 'not'i _$_ ('match'i / 'exist'i)
-  type_check  = 'is'i (_$_ 'not'i)? _$_ ('a'i / 'an'i) _$_ type
+  is_operator = 'is'i (_$_ 'not'i)? _$_ ('less'i / 'greater'i) _$_ 'than'i alone
+                (_$_ 'or'i _$_ 'equal'i _$_ 'to'i alone)?
+              / 'is'i (_$_ 'not'i)? _$_ ('close'i / 'equal'i) _$_ 'to'i alone
+              / 'is'i (_$_ 'not'i alone)?
+              / 'matches'i alone
+              / 'does'i _$_ 'not'i _$_ ('match'i / 'exist'i) alone
+  type_check  = 'is'i (_$_ 'not'i)? _$_ ('an'i / 'a'i) _$_ type
               / 'is'i _$_ 'no'i _$_ type
-              / 'is'i (_$_ 'not'i)? _$_ ('nan'i / 'finite'i)
-  type        = 'boolean'i / 'number'i / 'string'i / 'array'i / 'dictionary'i
-              / 'integer'i / 'ordinal'i / 'cardinal'i
+              / 'is'i (_$_ 'not'i)? _$_ ('nan'i / 'finite'i) alone
+              / 'exists'i alone
+  type        = 'boolean'i alone / 'number'i alone / 'string'i alone
+              / 'array'i alone / 'dictionary'i alone
+              / 'integer'i alone / 'ordinal'i alone / 'cardinal'i alone
 
 /**** literals ****/
 
@@ -337,6 +353,11 @@
   boolean              = 'true'i alone / 'false'i alone
   number               = integer / floating_point / 'pi'i alone / 'nan'i alone
   integer              = binary / decimal / hexadecimal
+                       / 'zero'i alone / 'one'i alone / 'two'i alone
+                       / 'three'i alone / 'four'i alone / 'five'i alone
+                       / 'six'i alone / 'seven'i alone / 'eight'i alone
+                       / 'nine'i alone / 'ten'i alone / 'eleven'i alone
+                       / 'twelve'i alone
   binary               = '0b'i [01]+
   decimal              = [+-]? digit+ ! '.'
   hexadecimal          = '0x'i hex_digit+
@@ -397,6 +418,9 @@
                 / 'deep'i / 'copy'i
                 / 'applet'i / 'card'i / 'component'i / 'visual'i
                 / 'the'i / 'item'i / 'items'i
+                / 'zero'i / 'one'i / 'two'i / 'three'i / 'four'i
+                / 'five'i / 'six'i / 'seven'i / 'eight'i / 'nine'i
+                / 'ten'i / 'eleven'i / 'twelve'i
   keyword       = 'a'i / 'an'i / 'any'i
                 / 'focused'i / 'visible'i / 'domevent'i
                 / 'prev'i / 'previous'i
