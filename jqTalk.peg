@@ -298,13 +298,13 @@
 
   expression           = assignment / ternary_term
   ternary_term         = or_term _ '?' _$ expression _$ ':' _$ expression
-  or_term              = (and_term _ 'or' (_$_ 'else'i)? alone  _$)* and_term
-  and_term             = (not_term _ 'and' (_$_ 'then'i)? alone _$)* not_term
-  not_term             = ('not' alone _$)* comparison
+  or_term              = (and_term _ 'or'i (_$_ 'else'i)? alone  _$)* and_term
+  and_term             = (not_term _ 'and'i (_$_ 'then'i)? alone _$)* not_term
+  not_term             = ('not'i alone _$)* comparison
   comparison           = (additive_term _ ('<' ![=>] / '<=' / '=' !'>' / '>=' / '>' !'=' / '<>' / is_operator) _$)? additive_term
                        / additive_term _ type_check
   additive_term        = (multiplicative_term _ ('+' / '-' / '&' / '&&') _$)* multiplicative_term
-  multiplicative_term  = (exponential_term _ ('*' / '/' / 'div' alone / 'mod' alone) _$)* exponential_term
+  multiplicative_term  = (exponential_term _ ('*' / '/' / 'div'i alone / 'mod'i alone) _$)* exponential_term
   exponential_term     = invocation (_ '^' _$ exponential_term)?
   invocation           = primary ( _ '(' _$ expression_list? _$ ')')?
                        / primary ( _ '[' _$ expression _$ ']')?
@@ -328,15 +328,15 @@
 
 /**** literals ****/
 
-  literal              = 'nothing' alone / boolean / number / string
+  literal              = 'nothing'i alone / boolean / number / string
                        / '[' _$ expression_list? _$ ']'
                        / '[' _$ key_value_list? _$ ']'
-  boolean              = 'true' alone / 'false' alone
-  number               = integer / floating_point / 'pi' alone / 'e' alone / 'nan' alone
+  boolean              = 'true'i alone / 'false'i alone
+  number               = integer / floating_point / 'pi'i alone / 'e'i alone / 'nan'i alone
   integer              = binary / decimal / hexadecimal
-  binary               = '0b' [01]+
+  binary               = '0b'i [01]+
   decimal              = [+-]? digit+ ! '.'
-  hexadecimal          = '0x' hex_digit+
+  hexadecimal          = '0x'i hex_digit+
   floating_point       = mantissa exponent?
   mantissa             = [+-]? (digit+ '.' digit* / '.' digit+)
   exponent             = [eE] [+-]? digit+
@@ -346,7 +346,7 @@
   double_quoted_string = '"' (escape_sequence / & no_control_char [^\"])* '"'
   single_quoted_text   = "'''" (escape_sequence / !"'''" [\'] / [^\'])* "'''"
   double_quoted_text   = '"""' (escape_sequence / !'"""' [\"] / [^\"])* '"""'
-  escape_sequence      = ('\\' [bfnrtv0'"\\]) / ('\\x' hex_digit{2}) / ('\\u' hex_digit{4})
+  escape_sequence      = ('\\' [bfnrtv0'"\\]) / ('\\x'i hex_digit{2}) / ('\\u'i hex_digit{4})
   no_control_char      = [^\x00-\x1F\x7F-\x9F\u200B\u2028\u2029\u2060]
   digit                = [0-9]
   hex_digit            = [0-9a-fA-F]
@@ -367,13 +367,40 @@
 
   alone = ! identifier_part
 
-  reserved_word = 'global' / 'local' / 'it' / 'me' / 'native'
-                / 'nothing' / 'true' / 'false' / 'nan' / 'e' / 'pi'
-                / 'div' / 'mod' / 'and' / 'or' / 'not'
-                / 'if' / 'then' / 'else' / 'select' / 'when' / 'otherwise'
-                / 'for' / 'from' / 'down' / 'to' / 'by' / 'repeat'
-                / 'while' / 'until' / 'next' / 'exit' / 'return'
-  keyword       = 'domevent'i
+  reserved_word = 'a'i / 'an'i
+                / 'global'i / 'local'i / 'property'i / 'it'i / 'me'i / 'my'i
+                / 'on'i / 'native'i / 'function'i / 'get'i / 'set'i / 'end'i
+                / 'add'i / 'subtract'i / 'multiply'i / 'divide'i / 'raise'i
+                / 'with'i / 'through'i
+                / 'invert'i
+                / 'insert'i / 'new'i / 'into'i / 'at'i / 'shift'i
+                / 'move'i / 'before'i / 'after'i
+                / 'delete'i
+                / 'is'i / 'in'i / 'of'i
+                / 'if'i / 'then'i / 'else'i / 'select'i / 'case'i
+                / 'repeat'i / 'forever'i / 'times'i
+                / 'for'i / 'from'i / 'down'i / 'to'i / 'by'i
+                / 'while'i / 'until'i / 'next'i / 'exit'i / 'return'i
+                / 'try'i / 'catch'i / 'throw'i
+                / 'trigger'i / 'using'i / 'pass'i
+                / 'call'i
+                / 'nothing'i / 'true'i / 'false'i / 'nan'i / 'e'i / 'pi'i
+                / 'div'i / 'mod'i / 'and'i / 'or'i / 'not'i
+                / 'close'i / 'equal'i / 'less'i / 'greater'i / 'finite'i
+                / 'matches'i / 'exists'i / 'does'i
+                / 'deep'i / 'copy'i
+                / 'applet'i / 'card'i / 'component'i / 'visual'i
+                / 'the'i / 'item'i / 'items'i
+  keyword       = 'any'i / 'focused'i / 'visible'i / 'domevent'i
+                / 'prev'i / 'previous'i
+                / 'top'i / 'up'i / 'down'i / 'bottom'i
+                / 'than'i / 'match'i / 'exist'i
+                / 'as'i / 'container'i / 'class'i
+                / 'boolean'i / 'number'i / 'string'i / 'array'i / 'dictionary'i
+                / 'integer'i / 'ordinal'i / 'cardinal'i
+                / 'first'i / 'second'i / 'third'i / 'fourth'i / 'fifth'i
+                / 'sixth'i / 'seventh'i / 'eighth'i / 'nineth'i / 'tenth'i
+                / 'eleventh'i / 'twelveth'i / 'last'i
 
 /**** comments ****/
 
