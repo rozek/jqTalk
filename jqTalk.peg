@@ -4,11 +4,11 @@
 *                                                                              *
 *******************************************************************************/
 
-  script = script_statements? _
+  script = script_statements? _$
 
 /**** (outer) script statements ****/
 
-  script_statements = _ script_statement (_ EOS _ script_statement?)*
+  script_statements = _$ script_statement (_ EOS _$ script_statement?)*
   script_statement  = property_definition
                     / getter_definition
                     / setter_definition
@@ -94,7 +94,7 @@
           / select_command
           / repeat_command
           / exit_command
-          / next_command
+          / continue_command
           / try_catch_command
           / throw_command
           / trigger_command
@@ -112,10 +112,10 @@
 /**** "get"/"set"/"put" ****/
 
   get_command = 'get'i alone _$ expression
-  set_command = 'set'i _$_ identifier _$_ 'to'i alone _$ expression
+  set_command = 'set'i _$_ variable _$_ 'to'i alone _$ expression
               / 'set'i _$_ item _$_ 'to'i alone _$ expression
               / 'set'i _$_ property _$_ 'to'i alone _$ expression
-  put_command = 'put'i alone _$ expression _ 'into'i _$_ identifier
+  put_command = 'put'i alone _$ expression _ 'into'i _$_ variable
               / 'put'i alone _$ expression _ 'into'i _$_ item
               / 'put'i alone _$ expression _ 'into'i _$_ property
 
@@ -153,20 +153,20 @@
 
   select_by_command = 'select'i __ 'by'i alone _$ expression _ EOS
                       ( _ 'case'i alone _$ case_values _ EOS
-                          inner_statements)*
+                        inner_statements)*
                       ( _ 'else'i _ EOS
-                          inner_statements)?
+                        inner_statements)?
                       _ 'end'i (__ 'select')?
   case_values       = case_value (_ ',' _ case_value)*
-  case_value        = expression
-                    / expression _ 'to'i alone _$_ expression
+  case_value        = expression _ 'to'i alone _$_ expression
+                    / expression
 
   select_command    = 'select'i _ EOS
                       ( _ 'case'i alone _$ expression _ EOS
-                          inner_statements)*
+                        inner_statements)*
                       ( _ 'else'i _ EOS
-                          inner_statements)?
-                      _ 'end'i (__ 'select'i)?
+                        inner_statements)?
+                      _ 'end'i (__ 'select')?
 
 /**** loops ****/
 
@@ -205,8 +205,8 @@
                              inner_statements
                            _ 'end'i (__ 'repeat'i)?
 
-  exit_command           = 'exit'i __ ('repeat'i / identifier)?
-  next_command           = 'next'i __ ('repeat'i / identifier)?
+  exit_command           = 'exit'i alone _ ('repeat'i / identifier)?
+  continue_command       = 'continue'i alone _ ('repeat'i / identifier)?
 
 /**** exception handling ****/
 
@@ -261,6 +261,8 @@
 
   property      = 'the'i _$_ identifier _$_ 'of'i _$_ visual
 
+  length        = 'the'i _$_ 'length'i _$_ 'of'i _$_ variable /* very special */
+
 /**** visual lookup ****/
 
   visual     = applet / card / container / component / any_visual
@@ -291,7 +293,7 @@
 /**** assignments ****/
 
   assignment          = variable_assignment / item_assignment
-  variable_assignment = identifier _ ':=' _ expression
+  variable_assignment = variable _ ':=' _ expression
   item_assignment     = ternary_term _ ':=' _ expression
 
 /**** expressions ****/
@@ -310,8 +312,9 @@
                        / primary (_ '[' _$ expression _$ ']')?
   primary              = literal / new_structure
                        / 'me'i alone / 'it'i alone / identifier
-                       / 'case'i alone _$ expression _$ 'then'i alone _$ expression _$ 'else'i alone _$ expression
+                       / absolute_item / relative_item / items / property / length
                        / '(' _$ expression _$ ')'
+                       / 'case'i alone _$ expression _$ 'then'i alone _$ expression _$ 'else'i alone _$ expression
 
 /**** "is" operators ****/
 
@@ -332,7 +335,7 @@
                        / '[' _$ expression_list? _$ ']'
                        / '[' _$ key_value_list _$ ']'
   boolean              = 'true'i alone / 'false'i alone
-  number               = integer / floating_point / 'pi'i alone / 'e'i alone / 'nan'i alone
+  number               = integer / floating_point / 'pi'i alone / 'nan'i alone
   integer              = binary / decimal / hexadecimal
   binary               = '0b'i [01]+
   decimal              = [+-]? digit+ ! '.'
@@ -340,12 +343,14 @@
   floating_point       = mantissa exponent?
   mantissa             = [+-]? (digit+ '.' digit* / '.' digit+)
   exponent             = [eE] [+-]? digit+
-  string               = single_quoted_text   / double_quoted_text /
-                         single_quoted_string / double_quoted_string
+  string               = single_quoted_text   / double_quoted_text
+                       / single_quoted_string / double_quoted_string
+                       / template_string
   single_quoted_string = "'" (escape_sequence / & no_control_char [^\'])* "'"
   double_quoted_string = '"' (escape_sequence / & no_control_char [^\"])* '"'
   single_quoted_text   = "'''" (escape_sequence / !"'''" [\'] / [^\'])* "'''"
   double_quoted_text   = '"""' (escape_sequence / !'"""' [\"] / [^\"])* '"""'
+  template_string      = '`' (escape_sequence / & no_control_char [^\`])* '`'
   escape_sequence      = ('\\' [bfnrtv0'"\\]) / ('\\x'i hex_digit{2}) / ('\\u'i hex_digit{4})
   no_control_char      = [^\x00-\x1F\x7F-\x9F\u200B\u2028\u2029\u2060]
   digit                = [0-9]
@@ -365,10 +370,11 @@
   identifier_start = [$_a-zA-Z]
   identifier_part  = [$_a-zA-Z0-9]
 
+  variable = 'it'i / 'me'i / identifier
+
   alone = ! identifier_part
 
-  reserved_word = 'a'i / 'an'i
-                / 'global'i / 'local'i / 'property'i / 'it'i / 'me'i / 'my'i
+  reserved_word = 'global'i / 'local'i / 'property'i / 'it'i / 'me'i / 'my'i
                 / 'on'i / 'native'i / 'function'i / 'get'i / 'set'i / 'end'i
                 / 'add'i / 'subtract'i / 'multiply'i / 'divide'i / 'raise'i
                 / 'with'i / 'through'i
@@ -380,18 +386,19 @@
                 / 'if'i / 'then'i / 'else'i / 'select'i / 'case'i
                 / 'repeat'i / 'forever'i / 'times'i
                 / 'for'i / 'from'i / 'down'i / 'to'i / 'by'i
-                / 'while'i / 'until'i / 'next'i / 'exit'i / 'return'i
+                / 'while'i / 'until'i / 'continue'i / 'exit'i / 'return'i
                 / 'try'i / 'catch'i / 'throw'i
                 / 'trigger'i / 'using'i / 'pass'i
                 / 'call'i
-                / 'nothing'i / 'true'i / 'false'i / 'nan'i / 'e'i / 'pi'i
+                / 'nothing'i / 'true'i / 'false'i / 'nan'i / 'pi'i
                 / 'div'i / 'mod'i / 'and'i / 'or'i / 'not'i
                 / 'close'i / 'equal'i / 'less'i / 'greater'i / 'finite'i
                 / 'matches'i / 'exists'i / 'does'i
                 / 'deep'i / 'copy'i
                 / 'applet'i / 'card'i / 'component'i / 'visual'i
                 / 'the'i / 'item'i / 'items'i
-  keyword       = 'any'i / 'focused'i / 'visible'i / 'domevent'i
+  keyword       = 'a'i / 'an'i / 'any'i
+                / 'focused'i / 'visible'i / 'domevent'i
                 / 'prev'i / 'previous'i
                 / 'top'i / 'up'i / 'down'i / 'bottom'i
                 / 'than'i / 'match'i / 'exist'i
@@ -417,8 +424,8 @@
 
 /**** whitespace with permitted EOL ****/
 
-  _$  = _ / EOL*
-  _$_ = (__ / EOL)+
+  _$  = ([ \t] / comment / suppressed_EOL / EOL)*
+  _$_ = ([ \t] / comment / suppressed_EOL / EOL)+
 
 /**** whitespace without permitted EOL (unless in block comments) ****/
 
